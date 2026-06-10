@@ -91,7 +91,7 @@ impl FileActionStyle {
 impl BranchStyles {
     pub const CURRENT_BRANCH: Style = FG_GREEN;
     pub const CONFLICT: Style = FG_RED;
-    pub const DELETED: Style = FG_RED;
+    pub const ARCHIVED: Style = FG_RED;
 }
 
 impl FileDiffStyles {

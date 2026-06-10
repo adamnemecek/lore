@@ -67,7 +67,7 @@ def test_branch(new_lore_repo):
     repo.branch_create("test-branch-staged")
     repo.unstage(offline=True)
     repo.branch_switch("test-branch")
-    repo.branch_delete("test-branch-staged")
+    repo.branch_archive("test-branch-staged")
     repo.stage(scan=True, offline=True)
 
     repo.commit()
@@ -90,21 +90,21 @@ def test_branch(new_lore_repo):
 
     # Verify we cannot delete current branch
     with pytest.raises(DeleteCurrentError):
-        repo.branch_delete("test-branch")
+        repo.branch_archive("test-branch")
     # Verify we cannot delete default branch
     with pytest.raises(DeleteDefaultError):
-        repo.branch_delete("main")
+        repo.branch_archive("main")
 
     # Verify protected branches can't be deleted
     repo.branch_switch("main")
     repo.repository_verify()
     repo.branch_protect("test-branch")
     with pytest.raises(DeleteProtectedError):
-        repo.branch_delete("test-branch")
+        repo.branch_archive("test-branch")
 
     # Unprotect and verify we can delete the branch
     repo.branch_unprotect("test-branch")
-    repo.branch_delete("test-branch")
+    repo.branch_archive("test-branch")
 
     # Verify branch is deleted
     assert not repo.has_branch("test-branch")
@@ -180,13 +180,13 @@ def test_branch(new_lore_repo):
         "Not on expected branch after create"
     )
 
-    # Branch info on an active branch reports deleted=false.
+    # Branch info on an active branch reports archived=false.
     active_info = parse_jsonl(repo.branch_info(json=True), "branchInfo")
     assert len(active_info) == 1, (
         f"Expected one branchInfo entry for active branch, got {active_info}"
     )
-    assert not active_info[0]["deleted"], (
-        "Active branch should report deleted=false in branch info"
+    assert not active_info[0]["archived"], (
+        "Active branch should report archived=false in branch info"
     )
     recreate_branch_id = active_info[0]["id"]
 
@@ -210,18 +210,18 @@ def test_branch(new_lore_repo):
 
     assert "On branch main" in repo.status(), "Not on expected branch after switch"
 
-    repo.branch_delete("recreate-branch", local=True)
+    repo.branch_archive("recreate-branch", local=True)
     repo.branch_list()
 
-    # Branch info queried by ID for a locally-deleted branch reports deleted=true.
-    deleted_info = parse_jsonl(
+    # Branch info queried by ID for a locally-archived branch reports archived=true.
+    archived_info = parse_jsonl(
         repo.branch_info(recreate_branch_id, json=True, offline=True), "branchInfo"
     )
-    assert len(deleted_info) == 1, (
-        f"Expected one branchInfo entry for deleted branch, got {deleted_info}"
+    assert len(archived_info) == 1, (
+        f"Expected one branchInfo entry for archived branch, got {archived_info}"
     )
-    assert deleted_info[0]["deleted"], (
-        "Locally-deleted branch should report deleted=true in branch info"
+    assert archived_info[0]["archived"], (
+        "Locally-archived branch should report archived=true in branch info"
     )
 
     # Ensure a branch cannot be created when it exists on remote, even when deleted locally,
@@ -231,7 +231,7 @@ def test_branch(new_lore_repo):
 
     assert "On branch main" in repo.status(), "Not on expected branch after switch"
 
-    repo.branch_delete("recreate-branch")
+    repo.branch_archive("recreate-branch")
 
     repo.branch_create("recreate-branch", offline=True)
     repo.branch_list()
@@ -242,7 +242,7 @@ def test_branch(new_lore_repo):
 
     assert "On branch main" in repo.status(), "Not on expected branch after switch"
 
-    repo.branch_delete("recreate-branch")
+    repo.branch_archive("recreate-branch")
 
     assert "On branch main" in repo.status(), (
         "Not on expected branch after switch and delete"
@@ -482,7 +482,7 @@ def test_branch_list_fresh_clone_lists_default_branch(new_lore_repo):
 
 
 @pytest.mark.smoke
-def test_branch_list_deleted(new_lore_repo):
+def test_branch_list_archived(new_lore_repo):
     repo: Lore = new_lore_repo()
 
     repo.write_commit_push(
@@ -491,82 +491,82 @@ def test_branch_list_deleted(new_lore_repo):
     )
 
     def local_branch_sets() -> tuple[set[str], set[str]]:
-        """Active-local and deleted-local branch names from branch list --deleted."""
-        output = repo.branch_list(deleted=True, json=True)
+        """Active-local and archived-local branch names from branch list --archived."""
+        output = repo.branch_list(archived=True, json=True)
         local = [
             e
             for e in parse_jsonl(output, "branchListEntry")
             if e["location"] == "local"
         ]
-        active = {e["name"] for e in local if not e["deleted"]}
-        deleted = {e["name"] for e in local if e["deleted"]}
-        return active, deleted
+        active = {e["name"] for e in local if not e["archived"]}
+        archived = {e["name"] for e in local if e["archived"]}
+        return active, archived
 
-    # Before any deletion: the default branch is active, nothing is deleted, and
-    # the active and deleted lists are disjoint.
-    active, deleted = local_branch_sets()
+    # Before any archive: the default branch is active, nothing is archived, and
+    # the active and archived lists are disjoint.
+    active, archived = local_branch_sets()
     assert "main" in active, "Active branch 'main' should appear in the local list"
-    assert not deleted, f"No branch should be deleted before any deletion; got {deleted}"
-    assert active.isdisjoint(deleted), (
-        f"A branch must appear in either the local or deleted list, never both; "
-        f"overlap={active & deleted}"
+    assert not archived, f"No branch should be archived before any archive; got {archived}"
+    assert active.isdisjoint(archived), (
+        f"A branch must appear in either the local or archived list, never both; "
+        f"overlap={active & archived}"
     )
 
-    # A newly created branch joins the active list and stays out of the deleted list.
-    repo.branch_create("to-delete")
+    # A newly created branch joins the active list and stays out of the archived list.
+    repo.branch_create("to-archive")
     repo.branch_switch("main")
-    active, deleted = local_branch_sets()
-    assert "to-delete" in active, "Newly created branch should be in the active list"
-    assert "to-delete" not in deleted, "Newly created branch should not be deleted"
-    assert active.isdisjoint(deleted), (
-        f"A branch must appear in either the local or deleted list, never both; "
-        f"overlap={active & deleted}"
+    active, archived = local_branch_sets()
+    assert "to-archive" in active, "Newly created branch should be in the active list"
+    assert "to-archive" not in archived, "Newly created branch should not be archived"
+    assert active.isdisjoint(archived), (
+        f"A branch must appear in either the local or archived list, never both; "
+        f"overlap={active & archived}"
     )
 
-    # Without --deleted, no entry is ever flagged deleted.
+    # Without --archived, no entry is ever flagged archived.
     entries = parse_jsonl(repo.branch_list(json=True), "branchListEntry")
-    assert not any(e["deleted"] for e in entries), (
-        "No branch should be flagged deleted without the --deleted flag"
+    assert not any(e["archived"] for e in entries), (
+        "No branch should be flagged archived without the --archived flag"
     )
 
-    # Deleting the branch locally removes it from the active list and moves it into
-    # the deleted list; unrelated active branches are untouched and the lists stay
-    # disjoint.
-    repo.branch_delete("to-delete", local=True)
-    active, deleted = local_branch_sets()
-    assert "to-delete" not in active, (
-        "Deleted branch should be removed from the active local list"
+    # Archiving the branch locally removes it from the active list and moves it
+    # into the archived list; unrelated active branches are untouched and the
+    # lists stay disjoint.
+    repo.branch_archive("to-archive", local=True)
+    active, archived = local_branch_sets()
+    assert "to-archive" not in active, (
+        "Archived branch should be removed from the active local list"
     )
-    assert "to-delete" in deleted, "Deleted branch should appear in the deleted list"
+    assert "to-archive" in archived, "Archived branch should appear in the archived list"
     assert "main" in active, "Unrelated active branch 'main' must stay active"
-    assert "main" not in deleted, "Active branch 'main' must never appear as deleted"
-    assert active.isdisjoint(deleted), (
-        f"A branch must appear in either the local or deleted list, never both; "
-        f"overlap={active & deleted}"
+    assert "main" not in archived, "Active branch 'main' must never appear as archived"
+    assert active.isdisjoint(archived), (
+        f"A branch must appear in either the local or archived list, never both; "
+        f"overlap={active & archived}"
     )
 
-    # The deleted entry is reported at the local location.
-    deleted_entry = next(
+    # The archived entry is reported at the local location.
+    archived_entry = next(
         e
-        for e in parse_jsonl(repo.branch_list(deleted=True, json=True), "branchListEntry")
-        if e["location"] == "local" and e["deleted"] and e["name"] == "to-delete"
+        for e in parse_jsonl(repo.branch_list(archived=True, json=True), "branchListEntry")
+        if e["location"] == "local" and e["archived"] and e["name"] == "to-archive"
     )
-    assert deleted_entry["location"] == "local", (
-        "Deleted branch location should be local"
+    assert archived_entry["location"] == "local", (
+        "Archived branch location should be local"
     )
 
-    # A second deletion adds to the deleted list; lists remain disjoint throughout.
-    repo.branch_create("to-delete-2")
+    # A second archive adds to the archived list; lists remain disjoint throughout.
+    repo.branch_create("to-archive-2")
     repo.branch_switch("main")
-    repo.branch_delete("to-delete-2", local=True)
-    active, deleted = local_branch_sets()
-    assert {"to-delete", "to-delete-2"} <= deleted, (
-        f"Both deleted branches should appear in the deleted list; got {deleted}"
+    repo.branch_archive("to-archive-2", local=True)
+    active, archived = local_branch_sets()
+    assert {"to-archive", "to-archive-2"} <= archived, (
+        f"Both archived branches should appear in the archived list; got {archived}"
     )
     assert "main" in active, "Active branch 'main' should remain in the local list"
-    assert active.isdisjoint(deleted), (
-        f"A branch must appear in either the local or deleted list, never both; "
-        f"overlap={active & deleted}"
+    assert active.isdisjoint(archived), (
+        f"A branch must appear in either the local or archived list, never both; "
+        f"overlap={active & archived}"
     )
 
 
@@ -917,7 +917,7 @@ def test_push_restores_deleted_branch(new_lore_repo):
 
     # Delete the branch from the first client (deletes name→id mapping on server)
     repo.branch_switch("main")
-    repo.branch_delete("feature")
+    repo.branch_archive("feature")
 
     branch_list = repo.branch_list()
     assert not branch_list.has_remote_branch("feature"), (
@@ -951,7 +951,7 @@ def test_push_restores_deleted_branch(new_lore_repo):
 
     # Delete the restored feature branch again
     repo.sync()
-    repo.branch_delete("feature")
+    repo.branch_archive("feature")
 
     branch_list = repo.branch_list()
     assert not branch_list.has_remote_branch("feature"), (
@@ -997,7 +997,7 @@ def test_push_restores_deleted_branch_no_new_commits(new_lore_repo):
 
     # Delete the branch from the original repo
     repo.branch_switch("main")
-    repo.branch_delete("restore-branch")
+    repo.branch_archive("restore-branch")
 
     branch_list = repo.branch_list()
     assert not branch_list.has_remote_branch("restore-branch"), (
@@ -1093,7 +1093,7 @@ def test_local_delete_and_switch_restores_from_remote(new_lore_repo):
     repo.branch_switch("main")
 
     # Delete local only
-    repo.branch_delete("restore-switch", local=True)
+    repo.branch_archive("restore-switch", local=True)
     branch_list = repo.branch_list()
     assert not branch_list.has_local_branch("restore-switch"), (
         "restore-switch should not exist locally after local delete"
@@ -1129,7 +1129,7 @@ def test_delete_and_create_different_name_same_client(new_lore_repo):
     repo.branch_create("old-name")
     repo.write_commit_push("Branch commit", {text_file: ["Line one\nBranch\n"]})
     repo.branch_switch("main")
-    repo.branch_delete("old-name")
+    repo.branch_archive("old-name")
 
     branch_list = repo.branch_list()
     assert not branch_list.has_remote_branch("old-name"), (
@@ -1179,7 +1179,7 @@ def test_query_deleted_branch_by_name_not_found(new_lore_repo):
     repo.branch_create("query-del")
     repo.write_commit_push("Branch commit", {text_file: ["Line one\nBranch\n"]})
     repo.branch_switch("main")
-    repo.branch_delete("query-del")
+    repo.branch_archive("query-del")
 
     # Fresh clone should not see the branch by name
     clone = repo.clone()
@@ -1227,7 +1227,7 @@ def test_delete_and_create_different_name_same_id(new_lore_repo):
     repo.branch_create("old-name", id=branch_id)
     repo.write_commit_push("Branch commit", {text_file: ["Line one\nBranch\n"]})
     repo.branch_switch("main")
-    repo.branch_delete("old-name")
+    repo.branch_archive("old-name")
 
     branch_list = repo.branch_list()
     assert not branch_list.has_remote_branch("old-name"), (
@@ -1262,7 +1262,7 @@ def test_query_deleted_branch_by_id(new_lore_repo):
     repo.branch_create("del-query-id")
     repo.write_commit_push("Branch commit", {text_file: ["Line one\nBranch\n"]})
     repo.branch_switch("main")
-    repo.branch_delete("del-query-id")
+    repo.branch_archive("del-query-id")
 
     # Branch should not appear in remote list
     branch_list = repo.branch_list()
@@ -1270,10 +1270,10 @@ def test_query_deleted_branch_by_id(new_lore_repo):
         "Deleted branch should not appear in remote branch list"
     )
 
-    # Branch should appear in deleted list (metadata still exists locally)
-    branch_list = repo.branch_list(deleted=True)
-    assert branch_list.has_deleted_branch("del-query-id"), (
-        "Deleted branch should appear in deleted branch list"
+    # Branch should appear in archived list (metadata still exists locally)
+    branch_list = repo.branch_list(archived=True)
+    assert branch_list.has_archived_branch("del-query-id"), (
+        "Archived branch should appear in archived branch list"
     )
 
 
@@ -1294,7 +1294,7 @@ def test_branch_info_remote_local_flags(new_lore_repo):
 
     # Branch present locally and remotely, no flag.
     info = parse_jsonl(repo.branch_info("flag-test", json=True), "branchInfo")[0]
-    assert info["deleted"] is False
+    assert info["archived"] is False
     assert info["latest"] != ZERO_HASH, "local latest must be populated by default"
     assert info["latestRemote"] != ZERO_HASH, (
         "remote latest must be populated by default"
@@ -1304,7 +1304,7 @@ def test_branch_info_remote_local_flags(new_lore_repo):
     info = parse_jsonl(
         repo.branch_info("flag-test", json=True, local=True), "branchInfo"
     )[0]
-    assert info["deleted"] is False
+    assert info["archived"] is False
     assert info["latest"] != ZERO_HASH, "--local must report the local latest"
     assert info["latestRemote"] == ZERO_HASH, (
         "--local must leave latestRemote zero"
@@ -1314,28 +1314,28 @@ def test_branch_info_remote_local_flags(new_lore_repo):
     info = parse_jsonl(
         repo.branch_info("flag-test", json=True, remote=True), "branchInfo"
     )[0]
-    assert info["deleted"] is False
+    assert info["archived"] is False
     assert info["latestRemote"] != ZERO_HASH, (
         "--remote must report the remote latest"
     )
 
-    repo.branch_delete("flag-test")
+    repo.branch_archive("flag-test")
 
-    # --remote against a branch deleted on the remote.
+    # --remote against a branch archived on the remote.
     info = parse_jsonl(
         repo.branch_info(branch_id, json=True, remote=True), "branchInfo"
     )[0]
-    assert info["deleted"] is True, (
-        "--remote must report deleted=true for a branch deleted on the remote"
+    assert info["archived"] is True, (
+        "--remote must report archived=true for a branch archived on the remote"
     )
 
-    # --local against a branch deleted locally.
+    # --local against a branch archived locally.
     info = parse_jsonl(
         repo.branch_info(branch_id, json=True, local=True, offline=True),
         "branchInfo",
     )[0]
-    assert info["deleted"] is True, (
-        "--local must report deleted=true for a branch deleted locally"
+    assert info["archived"] is True, (
+        "--local must report archived=true for a branch archived locally"
     )
 
     # --local against a branch that exists only on the remote.
@@ -1360,21 +1360,21 @@ def test_branch_info_remote_local_flags(new_lore_repo):
     )[0]["id"]
     other.branch_switch("main")
 
-    repo.branch_delete("two-instance")
+    repo.branch_archive("two-instance")
 
     info = parse_jsonl(
         other.branch_info(two_instance_id, json=True, local=True, offline=True),
         "branchInfo",
     )[0]
-    assert info["deleted"] is False, (
+    assert info["archived"] is False, (
         "--local in a second instance that still has the branch must report "
-        "deleted=false"
+        "archived=false"
     )
 
     info = parse_jsonl(
         other.branch_info(two_instance_id, json=True, remote=True), "branchInfo"
     )[0]
-    assert info["deleted"] is True, (
-        "--remote in a second instance must report deleted=true once the "
+    assert info["archived"] is True, (
+        "--remote in a second instance must report archived=true once the "
         "branch is gone from the remote"
     )

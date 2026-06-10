@@ -59,11 +59,11 @@ def notification_subscribe(
 
 @pytest.mark.smoke
 class TestNotifications:
-    def test_branch_delete_event(
+    def test_branch_archive_event(
         self,
         new_lore_repo,
     ):
-        repo: Lore = new_lore_repo("branch_delete_test")
+        repo: Lore = new_lore_repo("branch_archive_test")
         child_branch_name = "test-branch"
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -93,7 +93,7 @@ class TestNotifications:
 
             # go back to main and delete the branch to raise the 'deleted' notification
             repo.branch_switch("main")
-            repo.branch_delete(child_branch_name)
+            repo.branch_archive(child_branch_name)
 
             # get the notification output
             notification_output = notification_future.result()

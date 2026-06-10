@@ -199,7 +199,7 @@ Decision tree, top-down:
 > a stale revision and the merge will conflict against current state.
 
 > [!CAUTION]
-> `lore branch delete` removes the local branch pointer. Unmerged
+> `lore branch archive` removes the local branch pointer. Unmerged
 > revisions remain reachable through the reflog for 30 days, after
 > which garbage collection prunes them.
 

@@ -56,7 +56,7 @@ This page is generated from `lore --markdown-help` (CLI `0.8.2-nightly+31`). Eve
 * [`lore branch merge resolve theirs`↴](#lore-branch-merge-resolve-theirs)
 * [`lore branch merge abort`↴](#lore-branch-merge-abort)
 * [`lore branch diff`↴](#lore-branch-diff)
-* [`lore branch delete`↴](#lore-branch-delete)
+* [`lore branch archive`↴](#lore-branch-archive)
 * [`lore branch reset`↴](#lore-branch-reset)
 * [`lore branch protect`↴](#lore-branch-protect)
 * [`lore branch unprotect`↴](#lore-branch-unprotect)
@@ -269,8 +269,12 @@ Reports the staged revision (if any) and the files currently marked dirty. No fi
    Detected modifications, adds, and deletes are marked dirty; stale dirty flags are cleared. The refreshed flags are persisted in the staged state so subsequent `lore stage` and `lore status` calls see an accurate picture without rescanning.
 
    Without `--scan`, status reports only what is currently tracked: the staged revision (if any) plus files already marked dirty. Mark files individually with `lore dirty` for targeted updates, or pass `--scan` here for bulk reconciliation.
+* `--check-dirty` — Verify already-dirty files against the filesystem without a full scan.
+
+   Each file currently marked dirty is re-checked: one whose on-disk content still matches the tracked revision (same size, and same content when the modification time differs) has its dirty flag cleared and is dropped from the report, unless it is also staged. Adds, moves, copies, and deletes are always reported. The refreshed flags are persisted, so this requires write access.
 * `--reset` — Drop the existing staged anchor before computing status. Combine with --scan to scan from a clean slate
 * `--revision-only` — Only show revision info, skip all diffs
+* `--count` — Count directories and files (staged state if present, else current revision; view-filtered)
 * `--targets <file>` — Path to a targets file
 
 
@@ -606,7 +610,7 @@ Branch commands
 * `push` — Push commits to remote
 * `merge` — Merge two branches
 * `diff` — Diff two branches using the common ancestor base revision Will calculate the set of changes between source branch latest revision and the base revision that is not in the set of changes between the target branch latest revision and the base revision
-* `delete` — Delete an existing branch
+* `archive` — Archive an existing branch
 * `reset` — Reset local latest pointer for a branch
 * `protect` — Protect a branch from direct pushes
 * `unprotect` — Remove push protection from a branch
@@ -623,7 +627,7 @@ List available branches
 
 ###### **Options:**
 
-* `--deleted` — Include deleted local branches
+* `--archived` — Include archived local branches
 
 
 
@@ -874,15 +878,15 @@ Diff two branches using the common ancestor base revision Will calculate the set
 
 
 
-## `lore branch delete`
+## `lore branch archive`
 
-Delete an existing branch
+Archive an existing branch
 
-**Usage:** `lore branch delete <branch>`
+**Usage:** `lore branch archive <branch>`
 
 ###### **Arguments:**
 
-* `<branch>` — Name of the branch to delete
+* `<branch>` — Name of the branch to archive
 
 
 
@@ -2202,8 +2206,12 @@ Pass `--scan` to walk the filesystem under the given paths, reconcile every file
    Detected modifications, adds, and deletes are marked dirty; stale dirty flags are cleared. The refreshed flags are persisted in the staged state so subsequent `lore stage` and `lore status` calls see an accurate picture without rescanning.
 
    Without `--scan`, status reports only what is currently tracked: the staged revision (if any) plus files already marked dirty. Mark files individually with `lore dirty` for targeted updates, or pass `--scan` here for bulk reconciliation.
+* `--check-dirty` — Verify already-dirty files against the filesystem without a full scan.
+
+   Each file currently marked dirty is re-checked: one whose on-disk content still matches the tracked revision (same size, and same content when the modification time differs) has its dirty flag cleared and is dropped from the report, unless it is also staged. Adds, moves, copies, and deletes are always reported. The refreshed flags are persisted, so this requires write access.
 * `--reset` — Drop the existing staged anchor before computing status. Combine with --scan to scan from a clean slate
 * `--revision-only` — Only show revision info, skip all diffs
+* `--count` — Count directories and files (staged state if present, else current revision; view-filtered)
 * `--targets <file>` — Path to a targets file
 
 

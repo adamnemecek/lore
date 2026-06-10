@@ -14,8 +14,8 @@ use crate::auth::LoreAuthUrlEventData;
 use crate::auth::userinfo::LoreAuthIdentityEventData;
 use crate::auth::userinfo::LoreAuthUserInfoEventData;
 use crate::auth::userinfo::LoreAuthUserTokenEventData;
+use crate::branch::LoreBranchArchiveEventData;
 use crate::branch::LoreBranchCreateEventData;
-use crate::branch::LoreBranchDeleteEventData;
 use crate::branch::LoreBranchDiffBeginEventData;
 use crate::branch::LoreBranchDiffChangeBeginEventData;
 use crate::branch::LoreBranchDiffChangeEndEventData;
@@ -437,7 +437,7 @@ pub enum LoreEvent {
     AuthIdentity(LoreAuthIdentityEventData),
     BranchCreate(LoreBranchCreateEventData),
     BranchMultipleInstance(LoreBranchMultipleInstanceEventData),
-    BranchDelete(LoreBranchDeleteEventData),
+    BranchArchive(LoreBranchArchiveEventData),
     BranchListBegin(LoreBranchListBeginEventData),
     BranchListEntry(LoreBranchListEntryEventData),
     BranchListEnd(LoreBranchListEndEventData),

@@ -103,7 +103,7 @@ pub struct LoreBranchCreateEventData {
 #[repr(C)]
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LoreBranchDeleteEventData {
+pub struct LoreBranchArchiveEventData {
     pub name: LoreString,
 }
 
@@ -129,7 +129,7 @@ pub struct LoreBranchListEntryEventData {
     #[serde(with = "u8_as_bool")]
     pub is_current: u8,
     #[serde(with = "u8_as_bool")]
-    pub deleted: u8,
+    pub archived: u8,
 }
 
 #[repr(C)]
@@ -1863,7 +1863,7 @@ pub async fn delete(
 
     delete_name_to_id(repository.clone(), &branch_name).await?;
 
-    event::LoreEvent::BranchDelete(LoreBranchDeleteEventData {
+    event::LoreEvent::BranchArchive(LoreBranchArchiveEventData {
         name: branch_name.into(),
     })
     .send();
@@ -1988,7 +1988,7 @@ pub async fn list_output(
     repository: Arc<RepositoryContext>,
     local: bool,
     remote: bool,
-    deleted: bool,
+    archived: bool,
 ) -> Result<(), BranchError> {
     if remote {
         return list_remote_output(repository, true).await;
@@ -2014,7 +2014,7 @@ pub async fn list_output(
         let count = count.clone();
         let active_ids = active_ids.clone();
         lore_spawn!(tasks, async move {
-            if deleted {
+            if archived {
                 active_ids.insert(id);
             }
 
@@ -2048,7 +2048,7 @@ pub async fn list_output(
                 creator: creator.into(),
                 created,
                 is_current: (id == current_branch) as u8,
-                deleted: 0,
+                archived: 0,
             })
             .send();
 
@@ -2068,8 +2068,8 @@ pub async fn list_output(
     })
     .send();
 
-    // List deleted local branches
-    if deleted {
+    // List archived local branches
+    if archived {
         event::LoreEvent::BranchListBegin(LoreBranchListBeginEventData {
             location: LoreBranchLocation::Local,
         })
@@ -2081,14 +2081,14 @@ pub async fn list_output(
             .await
             .forward::<BranchError>("Failed to list branch metadata from store")?;
 
-        let deleted_count = Arc::new(AtomicUsize::new(0));
-        let mut deleted_tasks = JoinSet::new();
+        let archived_count = Arc::new(AtomicUsize::new(0));
+        let mut archived_tasks = JoinSet::new();
         let mut all_metadata = UnboundedReceiverStream::new(all_metadata_stream.channel());
         while let Some((_key, value)) = all_metadata.next().await {
             let repository = repository.clone();
-            let deleted_count = deleted_count.clone();
+            let archived_count = archived_count.clone();
             let active_ids = active_ids.clone();
-            lore_spawn!(deleted_tasks, async move {
+            lore_spawn!(archived_tasks, async move {
                 let metadata = load_metadata(repository.clone(), value).await;
                 let Ok(metadata) = metadata else {
                     return Ok(());
@@ -2127,27 +2127,27 @@ pub async fn list_output(
                     creator: creator.into(),
                     created,
                     is_current: 0,
-                    deleted: 1,
+                    archived: 1,
                 })
                 .send();
 
-                deleted_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                archived_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
                 Ok(())
             });
 
             let _ = lore_limit_drain_tasks!(
-                deleted_tasks,
+                archived_tasks,
                 MAX_TASKS,
                 BranchError::internal("Task failed")
             );
         }
 
-        let _ = lore_drain_tasks!(deleted_tasks, BranchError::internal("Task failed"));
+        let _ = lore_drain_tasks!(archived_tasks, BranchError::internal("Task failed"));
 
         event::LoreEvent::BranchListEnd(LoreBranchListEndEventData {
             location: LoreBranchLocation::Local,
-            count: deleted_count.load(std::sync::atomic::Ordering::Relaxed) as u64,
+            count: archived_count.load(std::sync::atomic::Ordering::Relaxed) as u64,
         })
         .send();
     }
@@ -2204,7 +2204,7 @@ async fn list_remote_output(
                 stack.iter().map(LoreBranchPoint::from).collect(),
             ),
             is_current: 0,
-            deleted: 0,
+            archived: 0,
         })
         .send();
     }

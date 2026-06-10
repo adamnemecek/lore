@@ -1158,7 +1158,7 @@ def test_merge_conflicting_directories(new_lore_repo):
     repo.commit("Second stacked branch")
     repo.push()
 
-    repo.branch_delete("first-stacked-branch")
+    repo.branch_archive("first-stacked-branch")
     repo.branch_switch("main")
 
     assert not repo.file_exists(os.path.join(directory_path, "file.txt")), (

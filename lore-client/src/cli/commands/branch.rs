@@ -14,8 +14,8 @@ use lore::branch::LoreBranchMetadataGetArgs;
 use lore::branch::LoreBranchMetadataSetArgs;
 use lore::interface::Context;
 use lore::interface::LoreArray;
+use lore::interface::LoreBranchArchiveArgs;
 use lore::interface::LoreBranchCreateArgs;
-use lore::interface::LoreBranchDeleteArgs;
 use lore::interface::LoreBranchDiffArgs;
 use lore::interface::LoreBranchInfoArgs;
 use lore::interface::LoreBranchListArgs;
@@ -314,8 +314,8 @@ pub struct BranchUnprotectArgs {
 }
 
 #[derive(Args)]
-pub struct BranchDeleteArgs {
-    /// Name of the branch to delete
+pub struct BranchArchiveArgs {
+    /// Name of the branch to archive
     #[clap(value_name = "branch")]
     branch: String,
 }
@@ -349,9 +349,9 @@ pub struct BranchArgs {
 
 #[derive(Args)]
 pub struct BranchListArgs {
-    /// Include deleted local branches
+    /// Include archived local branches
     #[clap(long)]
-    deleted: bool,
+    archived: bool,
 }
 
 #[derive(Args)]
@@ -390,8 +390,8 @@ pub enum BranchCommands {
     /// target branch latest revision and the base revision
     Diff(BranchDiffArgs),
 
-    /// Delete an existing branch
-    Delete(BranchDeleteArgs),
+    /// Archive an existing branch
+    Archive(BranchArchiveArgs),
 
     /// Reset local latest pointer for a branch
     Reset(BranchResetArgs),
@@ -1294,10 +1294,10 @@ pub fn handle_branch_merge(globals: LoreGlobalArgs, args: &BranchMergeArgs) -> u
 
 pub fn handle_branch_list(globals: LoreGlobalArgs, args: &BranchListArgs) -> u8 {
     let list_args = LoreBranchListArgs {
-        deleted: args.deleted as u8,
+        archived: args.archived as u8,
     };
 
-    let deleted_section = std::sync::atomic::AtomicBool::new(false);
+    let archived_section = std::sync::atomic::AtomicBool::new(false);
     let remote_seen = std::sync::atomic::AtomicBool::new(false);
     let warn_on_missing_remote = !globals.local() && !globals.remote() && !globals.offline();
     let callback = output_formatter().unwrap_or(Some(
@@ -1307,10 +1307,10 @@ pub fn handle_branch_list(globals: LoreGlobalArgs, args: &BranchListArgs) -> u8 
                     remote_seen.store(true, std::sync::atomic::Ordering::Relaxed);
                 }
                 if data.location == LoreBranchLocation::Local
-                    && deleted_section.load(std::sync::atomic::Ordering::Relaxed)
+                    && archived_section.load(std::sync::atomic::Ordering::Relaxed)
                 {
                     println!(
-                        "{}Deleted local branches:{}",
+                        "{}Archived local branches:{}",
                         CommonStyles::HEADERS,
                         anstyle::Reset
                     );
@@ -1329,8 +1329,8 @@ pub fn handle_branch_list(globals: LoreGlobalArgs, args: &BranchListArgs) -> u8 
             LoreEvent::BranchListEntry(data) => {
                 println!(
                     "{}{} {}{}",
-                    if data.deleted != 0 {
-                        BranchStyles::DELETED
+                    if data.archived != 0 {
+                        BranchStyles::ARCHIVED
                     } else if data.is_current != 0 {
                         BranchStyles::CURRENT_BRANCH
                     } else {
@@ -1343,9 +1343,9 @@ pub fn handle_branch_list(globals: LoreGlobalArgs, args: &BranchListArgs) -> u8 
             }
             LoreEvent::BranchListEnd(data) => {
                 if data.location == LoreBranchLocation::Local
-                    && !deleted_section.load(std::sync::atomic::Ordering::Relaxed)
+                    && !archived_section.load(std::sync::atomic::Ordering::Relaxed)
                 {
-                    deleted_section.store(true, std::sync::atomic::Ordering::Relaxed);
+                    archived_section.store(true, std::sync::atomic::Ordering::Relaxed);
                 }
                 if data.count == 0 {
                     match data.location {
@@ -1498,16 +1498,16 @@ pub fn handle_branch_unprotect(globals: LoreGlobalArgs, args: &BranchUnprotectAr
     return runtime().block_on(branch::unprotect(globals, unprotect_args, callback)) as u8;
 }
 
-pub fn handle_branch_delete(globals: LoreGlobalArgs, args: &BranchDeleteArgs) -> u8 {
-    let delete_args = LoreBranchDeleteArgs {
+pub fn handle_branch_archive(globals: LoreGlobalArgs, args: &BranchArchiveArgs) -> u8 {
+    let archive_args = LoreBranchArchiveArgs {
         branch: LoreString::from(&args.branch),
     };
 
     let callback = output_formatter().unwrap_or(Some(
         (Box::new(move |event: &LoreEvent| match event {
-            LoreEvent::BranchDelete(data) => {
+            LoreEvent::BranchArchive(data) => {
                 println!(
-                    "{}Deleted branch {}{}",
+                    "{}Archived branch {}{}",
                     CommonStyles::SUCCESS,
                     data.name,
                     anstyle::Reset
@@ -1522,7 +1522,7 @@ pub fn handle_branch_delete(globals: LoreGlobalArgs, args: &BranchDeleteArgs) ->
             .with_defaults(),
     ));
 
-    return runtime().block_on(branch::delete(globals, delete_args, callback)) as u8;
+    return runtime().block_on(branch::archive(globals, archive_args, callback)) as u8;
 }
 
 pub fn handle_branch_reset(globals: LoreGlobalArgs, args: &BranchResetArgs) -> u8 {
@@ -1695,7 +1695,7 @@ pub fn handle_branch_commands(cmd: &BranchCommands, globals: LoreGlobalArgs) -> 
         BranchCommands::Unprotect(args) => {
             return handle_branch_unprotect(globals, args);
         }
-        BranchCommands::Delete(args) => handle_branch_delete(globals, args),
+        BranchCommands::Archive(args) => handle_branch_archive(globals, args),
         BranchCommands::Reset(args) => {
             return handle_branch_reset(globals, args);
         }

@@ -223,8 +223,8 @@ async fn diff_local(
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, LoreArgs)]
 #[handler(list_local)]
 pub struct LoreBranchListArgs {
-    /// Include deleted local branches in listing
-    pub deleted: u8,
+    /// Include archived local branches in listing
+    pub archived: u8,
 }
 
 /// Lists all branches in the repository.
@@ -267,7 +267,7 @@ async fn list_local(
             repository,
             execution_context().globals().local(),
             execution_context().globals().remote(),
-            args.deleted != 0,
+            args.archived != 0,
         )
     })
     .await
@@ -1068,13 +1068,13 @@ async fn unprotect_local(
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, LoreArgs)]
-#[handler(delete_local)]
-pub struct LoreBranchDeleteArgs {
+#[handler(archive_local)]
+pub struct LoreBranchArchiveArgs {
     // Name of the branch
     pub branch: LoreString,
 }
 
-/// Deletes a branch locally and, unless running in local mode, from the remote.
+/// Archives a branch locally and, unless running in local mode, on the remote.
 ///
 /// # Events
 ///
@@ -1093,33 +1093,33 @@ pub struct LoreBranchDeleteArgs {
 ///
 /// | Event | Description |
 /// |-------|-------------|
-/// | [`LoreEvent::BranchDelete`](crate::interface::LoreEvent::BranchDelete) | Emitted when the branch has been successfully deleted |
-pub async fn delete(
+/// | [`LoreEvent::BranchArchive`](crate::interface::LoreEvent::BranchArchive) | Emitted when the branch has been successfully archived |
+pub async fn archive(
     globals: LoreGlobalArgs,
-    args: LoreBranchDeleteArgs,
+    args: LoreBranchArchiveArgs,
     callback: LoreEventCallback,
 ) -> i32 {
-    dispatch_call(globals, args, callback, delete_local).await
+    dispatch_call(globals, args, callback, archive_local).await
 }
 
-async fn delete_local(
+async fn archive_local(
     globals: LoreGlobalArgs,
-    args: LoreBranchDeleteArgs,
+    args: LoreBranchArchiveArgs,
     callback: LoreEventCallback,
 ) -> i32 {
     repository_call_write(
         globals,
         callback,
         args,
-        delete,
-        |repository, _token, args| delete_impl(repository, args),
+        archive,
+        |repository, _token, args| archive_impl(repository, args),
     )
     .await
 }
 
-async fn delete_impl(
+async fn archive_impl(
     repository: Arc<RepositoryContext>,
-    args: LoreBranchDeleteArgs,
+    args: LoreBranchArchiveArgs,
 ) -> Result<(), BranchError> {
     let execution = execution_context();
 
@@ -1133,7 +1133,7 @@ async fn delete_impl(
         lore_revision::instance::load_current_anchor(&repository).await
         && current_branch == branch.id
     {
-        lore_error!("Cannot delete the current branch");
+        lore_error!("Cannot archive the current branch");
         execution
             .dispatcher
             .send_error(BranchError::from(lore_base::error::DeleteCurrent {
@@ -1144,8 +1144,8 @@ async fn delete_impl(
     }
 
     if !local_fail {
-        // Delete branch
-        lore_debug!("Attempt deletion of local branch");
+        // Archive branch
+        lore_debug!("Attempt archive of local branch");
         if let Err(err) = branch::delete(repository.clone(), branch.id).await {
             execution.dispatcher.send_error(err);
             local_fail = true;
@@ -1156,8 +1156,8 @@ async fn delete_impl(
         && !execution_context().globals().local()
         && let Ok(remote) = repository.remote().await
     {
-        // Delete remote branch
-        lore_debug!("Attempt deletion of remote branch");
+        // Archive remote branch
+        lore_debug!("Attempt archive of remote branch");
         if let Err(err) = branch::delete_remote(remote.clone(), repository.id, branch.id).await {
             execution.dispatcher.send_error(err);
         }

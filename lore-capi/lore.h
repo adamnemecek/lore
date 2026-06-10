@@ -216,9 +216,9 @@ typedef struct lore_branch_multiple_instance_event_data_t {
   struct lore_string_array_t instance_paths;
 } lore_branch_multiple_instance_event_data_t;
 
-typedef struct lore_branch_delete_event_data_t {
+typedef struct lore_branch_archive_event_data_t {
   struct lore_string_t name;
-} lore_branch_delete_event_data_t;
+} lore_branch_archive_event_data_t;
 
 typedef struct lore_branch_list_begin_event_data_t {
   enum lore_branch_location_t location;
@@ -244,7 +244,7 @@ typedef struct lore_branch_list_entry_event_data_t {
   struct lore_string_t creator;
   uint64_t created;
   uint8_t is_current;
-  uint8_t deleted;
+  uint8_t archived;
 } lore_branch_list_entry_event_data_t;
 
 typedef struct lore_branch_list_end_event_data_t {
@@ -272,7 +272,7 @@ typedef struct lore_branch_info_event_data_t {
   struct lore_string_t creator;
   uint64_t created;
   struct lore_branch_point_array_t stack;
-  uint8_t deleted;
+  uint8_t archived;
 } lore_branch_info_event_data_t;
 
 typedef struct lore_branch_diff_begin_event_data_t {
@@ -1682,7 +1682,7 @@ enum lore_event_id_t {
   LORE_EVENT_AUTH_IDENTITY,
   LORE_EVENT_BRANCH_CREATE,
   LORE_EVENT_BRANCH_MULTIPLE_INSTANCE,
-  LORE_EVENT_BRANCH_DELETE,
+  LORE_EVENT_BRANCH_ARCHIVE,
   LORE_EVENT_BRANCH_LIST_BEGIN,
   LORE_EVENT_BRANCH_LIST_ENTRY,
   LORE_EVENT_BRANCH_LIST_END,
@@ -1901,7 +1901,7 @@ typedef struct lore_event_t {
     struct lore_auth_identity_event_data_t auth_identity;
     struct lore_branch_create_event_data_t branch_create;
     struct lore_branch_multiple_instance_event_data_t branch_multiple_instance;
-    struct lore_branch_delete_event_data_t branch_delete;
+    struct lore_branch_archive_event_data_t branch_archive;
     struct lore_branch_list_begin_event_data_t branch_list_begin;
     struct lore_branch_list_entry_event_data_t branch_list_entry;
     struct lore_branch_list_end_event_data_t branch_list_end;
@@ -2236,13 +2236,13 @@ typedef struct lore_branch_unprotect_args_t {
   struct lore_string_t branch;
 } lore_branch_unprotect_args_t;
 
-typedef struct lore_branch_delete_args_t {
+typedef struct lore_branch_archive_args_t {
   struct lore_string_t branch;
-} lore_branch_delete_args_t;
+} lore_branch_archive_args_t;
 
 typedef struct lore_branch_list_args_t {
-  // Include deleted local branches in listing
-  uint8_t deleted;
+  // Include archived local branches in listing
+  uint8_t archived;
 } lore_branch_list_args_t;
 
 typedef struct lore_branch_merge_abort_args_t {
@@ -3921,7 +3921,7 @@ void lore_branch_unprotect_async(const struct lore_global_args_t *globals,
                                  const struct lore_branch_unprotect_args_t *args,
                                  struct lore_event_callback_config_t callback);
 
-// Delete a branch from the repository.
+// Archive a branch in the repository.
 //
 // # Events
 //
@@ -3942,12 +3942,12 @@ void lore_branch_unprotect_async(const struct lore_global_args_t *globals,
 //
 // | Tag | Data Type | Description |
 // |-----|-----------|-------------|
-// | `LORE_EVENT_BRANCH_DELETE` | `lore_branch_delete_event_data_t` | Emitted when the branch has been successfully deleted |
-int32_t lore_branch_delete(const struct lore_global_args_t *globals,
-                           const struct lore_branch_delete_args_t *args,
-                           struct lore_event_callback_config_t callback);
+// | `LORE_EVENT_BRANCH_ARCHIVE` | `lore_branch_archive_event_data_t` | Emitted when the branch has been successfully archived |
+int32_t lore_branch_archive(const struct lore_global_args_t *globals,
+                            const struct lore_branch_archive_args_t *args,
+                            struct lore_event_callback_config_t callback);
 
-// Asynchronous version of `lore_branch_delete`.
+// Asynchronous version of `lore_branch_archive`.
 //
 // # Events
 //
@@ -3968,10 +3968,10 @@ int32_t lore_branch_delete(const struct lore_global_args_t *globals,
 //
 // | Tag | Data Type | Description |
 // |-----|-----------|-------------|
-// | `LORE_EVENT_BRANCH_DELETE` | `lore_branch_delete_event_data_t` | Emitted when the branch has been successfully deleted |
-void lore_branch_delete_async(const struct lore_global_args_t *globals,
-                              const struct lore_branch_delete_args_t *args,
-                              struct lore_event_callback_config_t callback);
+// | `LORE_EVENT_BRANCH_ARCHIVE` | `lore_branch_archive_event_data_t` | Emitted when the branch has been successfully archived |
+void lore_branch_archive_async(const struct lore_global_args_t *globals,
+                               const struct lore_branch_archive_args_t *args,
+                               struct lore_event_callback_config_t callback);
 
 // List all branches in the repository.
 //

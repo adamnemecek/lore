@@ -23,7 +23,7 @@ pub enum LoreCommand {
     BranchDiff(crate::branch::LoreBranchDiffArgs),
     BranchProtect(crate::branch::LoreBranchProtectArgs),
     BranchUnprotect(crate::branch::LoreBranchUnprotectArgs),
-    BranchDelete(crate::branch::LoreBranchDeleteArgs),
+    BranchArchive(crate::branch::LoreBranchArchiveArgs),
     BranchList(crate::branch::LoreBranchListArgs),
     BranchMergeAbort(crate::branch::LoreBranchMergeAbortArgs),
     BranchMergeUnresolve(crate::branch::LoreBranchMergeUnresolveArgs),

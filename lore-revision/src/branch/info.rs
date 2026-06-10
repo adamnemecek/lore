@@ -97,7 +97,7 @@ pub struct LoreBranchInfoEventData {
     pub created: u64,
     pub stack: LoreArray<LoreBranchPoint>,
     #[serde(with = "u8_as_bool")]
-    pub deleted: u8,
+    pub archived: u8,
 }
 
 pub async fn info(repository: Arc<RepositoryContext>, branch: String) -> Result<(), InfoError> {
@@ -183,7 +183,7 @@ pub async fn info(repository: Arc<RepositoryContext>, branch: String) -> Result<
             name.to_string()
         });
 
-    let deleted = branch_local
+    let archived = branch_local
         .as_ref()
         .or(branch_remote.as_ref())
         .is_some_and(|b| b.deleted);
@@ -203,7 +203,7 @@ pub async fn info(repository: Arc<RepositoryContext>, branch: String) -> Result<
         creator: creator.into(),
         created: branch::created(&metadata),
         stack: LoreArray::from_vec(stack.iter().map(LoreBranchPoint::from).collect()),
-        deleted: deleted as u8,
+        archived: archived as u8,
     })
     .send();
 

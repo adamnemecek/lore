@@ -22,7 +22,7 @@ class BranchList:
     current_branch: str | None
     local_branches: list[str]
     remote_branches: list[str]
-    deleted_branches: list[str] = dc_field(default_factory=list)
+    archived_branches: list[str] = dc_field(default_factory=list)
 
     def has_local_branch(self, name: str) -> bool:
         return name in self.local_branches
@@ -34,8 +34,8 @@ class BranchList:
         """Check if a branch exists locally or remotely."""
         return self.has_local_branch(name) or self.has_remote_branch(name)
 
-    def has_deleted_branch(self, name: str) -> bool:
-        return name in self.deleted_branches
+    def has_archived_branch(self, name: str) -> bool:
+        return name in self.archived_branches
 
 
 @dataclass
@@ -294,17 +294,17 @@ def parse_lock_status(output: str) -> list[LockStatus]:
 
 
 def parse_branch_list(output: str):
-    # Split off deleted section first
-    deleted_split = output.strip().split("Deleted local branches:")
-    main_output = deleted_split[0]
-    deleted_string = deleted_split[1] if len(deleted_split) > 1 else ""
+    # Split off archived section first
+    archived_split = output.strip().split("Archived local branches:")
+    main_output = archived_split[0]
+    archived_string = archived_split[1] if len(archived_split) > 1 else ""
 
-    # If there's a remote section after deleted, split it out
-    if "Remote branches:" in deleted_string:
-        deleted_part, remote_after_deleted = deleted_string.split("Remote branches:", 1)
+    # If there's a remote section after archived, split it out
+    if "Remote branches:" in archived_string:
+        archived_part, remote_after_archived = archived_string.split("Remote branches:", 1)
     else:
-        deleted_part = deleted_string
-        remote_after_deleted = ""
+        archived_part = archived_string
+        remote_after_archived = ""
 
     output_split = main_output.split("Remote branches:")
     local_branches = []
@@ -322,10 +322,10 @@ def parse_branch_list(output: str):
     remote_string = ""
     if len(output_split) > 1:
         remote_string = output_split[1].strip()
-    if remote_after_deleted:
+    if remote_after_archived:
         if remote_string:
             remote_string += "\n"
-        remote_string += remote_after_deleted.strip()
+        remote_string += remote_after_archived.strip()
 
     remote_branches = [
         branch.lstrip("*").strip()
@@ -333,13 +333,13 @@ def parse_branch_list(output: str):
         if branch.strip()
     ]
 
-    deleted_branches = [
+    archived_branches = [
         branch.strip()
-        for branch in deleted_part.strip().splitlines()
+        for branch in archived_part.strip().splitlines()
         if branch.strip() and not branch.strip().startswith("No ")
     ]
 
-    return BranchList(current_branch, local_branches, remote_branches, deleted_branches)
+    return BranchList(current_branch, local_branches, remote_branches, archived_branches)
 
 
 def parse_branch_list_json(output: str) -> BranchList:

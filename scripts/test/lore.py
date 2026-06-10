@@ -462,18 +462,18 @@ class Lore:
 
     @overload
     def branch_list(
-        self, *, deleted: bool = False, **kwargs: Unpack[GlobalOptionsParseable]
+        self, *, archived: bool = False, **kwargs: Unpack[GlobalOptionsParseable]
     ) -> BranchList: ...
 
     @overload
     def branch_list(
-        self, *, deleted: bool = False, **kwargs: Unpack[GlobalOptions]
+        self, *, archived: bool = False, **kwargs: Unpack[GlobalOptions]
     ) -> BranchList | str: ...
 
     def branch_list(
-        self, *, deleted: bool = False, **kwargs: Unpack[GlobalOptions]
+        self, *, archived: bool = False, **kwargs: Unpack[GlobalOptions]
     ) -> BranchList | str:
-        args = ["branch", "list"] + (["--deleted"] if deleted else [])
+        args = ["branch", "list"] + (["--archived"] if archived else [])
         output = self.run(args, **kwargs)
         if can_parse_output(kwargs):
             return parse_branch_list(output)
@@ -687,8 +687,8 @@ class Lore:
             **kwargs,
         )
 
-    def branch_delete(self, branch: str | None = None, **kwargs: Unpack[GlobalOptions]):
-        return self.run(["branch", "delete"] + ([branch] if branch else []), **kwargs)
+    def branch_archive(self, branch: str | None = None, **kwargs: Unpack[GlobalOptions]):
+        return self.run(["branch", "archive"] + ([branch] if branch else []), **kwargs)
 
     def branch_reset(
         self,

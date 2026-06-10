@@ -728,9 +728,9 @@ pub extern "C" fn lore_branch_unprotect_async(
     run_asynchronously(globals, args, callback, crate::branch::unprotect);
 }
 
-pub type LoreBranchDeleteArgs = crate::branch::LoreBranchDeleteArgs;
+pub type LoreBranchArchiveArgs = crate::branch::LoreBranchArchiveArgs;
 
-/// Delete a branch from the repository.
+/// Archive a branch in the repository.
 ///
 /// # Events
 ///
@@ -751,17 +751,17 @@ pub type LoreBranchDeleteArgs = crate::branch::LoreBranchDeleteArgs;
 ///
 /// | Tag | Data Type | Description |
 /// |-----|-----------|-------------|
-/// | `LORE_EVENT_BRANCH_DELETE` | `lore_branch_delete_event_data_t` | Emitted when the branch has been successfully deleted |
+/// | `LORE_EVENT_BRANCH_ARCHIVE` | `lore_branch_archive_event_data_t` | Emitted when the branch has been successfully archived |
 #[unsafe(no_mangle)]
-pub extern "C" fn lore_branch_delete(
+pub extern "C" fn lore_branch_archive(
     globals: &LoreGlobalArgs,
-    args: &LoreBranchDeleteArgs,
+    args: &LoreBranchArchiveArgs,
     callback: LoreEventCallbackConfig,
 ) -> i32 {
-    run_synchronously(globals, args, callback, crate::branch::delete)
+    run_synchronously(globals, args, callback, crate::branch::archive)
 }
 
-/// Asynchronous version of `lore_branch_delete`.
+/// Asynchronous version of `lore_branch_archive`.
 ///
 /// # Events
 ///
@@ -782,14 +782,14 @@ pub extern "C" fn lore_branch_delete(
 ///
 /// | Tag | Data Type | Description |
 /// |-----|-----------|-------------|
-/// | `LORE_EVENT_BRANCH_DELETE` | `lore_branch_delete_event_data_t` | Emitted when the branch has been successfully deleted |
+/// | `LORE_EVENT_BRANCH_ARCHIVE` | `lore_branch_archive_event_data_t` | Emitted when the branch has been successfully archived |
 #[unsafe(no_mangle)]
-pub extern "C" fn lore_branch_delete_async(
+pub extern "C" fn lore_branch_archive_async(
     globals: &LoreGlobalArgs,
-    args: &LoreBranchDeleteArgs,
+    args: &LoreBranchArchiveArgs,
     callback: LoreEventCallbackConfig,
 ) {
-    run_asynchronously(globals, args, callback, crate::branch::delete);
+    run_asynchronously(globals, args, callback, crate::branch::archive);
 }
 
 pub type LoreBranchListArgs = crate::branch::LoreBranchListArgs;
