@@ -2348,3 +2348,121 @@ def test_status_plain_has_no_summary_event(new_lore_repo):
     assert parse_status_summary_json(output) is None, (
         "plain status must not emit a repositoryStatusSummary event"
     )
+
+
+# ===========================================================================
+# Dirty-marked adds keep their add classification across a partial commit
+# ===========================================================================
+
+
+@pytest.mark.smoke
+def test_dirty_partial_commit_keeps_uncommitted_adds(new_lore_repo):
+    """New files flagged via the dirty API stay classified as adds across a
+    partial commit, in every placement -- including a new subdirectory of an
+    already-committed directory.
+
+    A base revision commits a directory `existing/`. New files are then created
+    in every placement a partial commit could disturb and flagged with the
+    `dirty` API (not `status --scan`): two directly in the repository root, two
+    in two brand-new top-level directories, and two in two brand-new
+    subdirectories of the committed `existing/` directory. Status must report
+    every one of them as a dirty add.
+
+    One file of each kind is then staged and committed, leaving at least one
+    uncommitted file of every kind -- a root file, a whole new top-level
+    directory, and a whole new subdirectory of the existing directory. A plain
+    `status` (no rescan) must still report each uncommitted file as an add: the
+    partial commit must not reclassify them as modifies. A following
+    `status --check-dirty` must report the same, since check-dirty only
+    re-verifies the content of already-dirty files and never re-derives
+    add/keep.
+    """
+    repo: Lore = new_lore_repo()
+
+    # Base revision with an existing committed directory so the new
+    # subdirectories below land inside a directory the base already knows.
+    repo.write_files(
+        {
+            "existing/base_one.bin": os.urandom(64),
+            "existing/base_two.bin": os.urandom(64),
+        }
+    )
+    repo.stage(scan=True, offline=True)
+    repo.commit(offline=True)
+
+    # New files grouped so exactly one file of each kind is committed below and
+    # at least one of each kind is left uncommitted.
+    committed = [
+        "root_committed.bin",
+        "top_committed/one.bin",
+        "top_committed/two.bin",
+        "existing/sub_committed/one.bin",
+        "existing/sub_committed/two.bin",
+    ]
+    pending = [
+        "root_pending.bin",
+        "top_pending/one.bin",
+        "top_pending/two.bin",
+        "existing/sub_pending/one.bin",
+        "existing/sub_pending/two.bin",
+    ]
+    repo.write_files({name: os.urandom(64) for name in committed + pending})
+
+    # Flag every new file dirty through the dirty API (not status --scan).
+    repo.dirty(committed + pending, offline=True)
+
+    def dirty_files(**kwargs) -> dict[str, dict]:
+        return {
+            to_posix(e["path"]): e
+            for e in get_status_files(repo, **kwargs)
+            if e.get("type") == "file"
+        }
+
+    # Status classifies every dirtied new file as an add, in every placement --
+    # including the new subdirectories of the already-committed directory.
+    dirtied = dirty_files()
+    all_new = {to_posix(p) for p in committed + pending}
+    assert set(dirtied) == all_new, (
+        f"dirty + status should report exactly the new files as adds, "
+        f"got {sorted(dirtied)}"
+    )
+    for p in committed + pending:
+        entry = dirtied[to_posix(p)]
+        assert entry["action"] == "add", f"{p} should be a dirty add: {entry}"
+        assert entry["flagDirty"] is True, f"{p} should be dirty: {entry}"
+
+    # Partial commit: stage and commit one file of each kind, leaving the rest.
+    repo.stage(committed, offline=True)
+    repo.commit(offline=True)
+
+    # A plain status (no rescan) must still report each uncommitted file as an
+    # add -- the partial commit must not demote them to modifies.
+    after_commit = dirty_files()
+    pending_posix = {to_posix(p) for p in pending}
+    assert set(after_commit) == pending_posix, (
+        f"after a partial commit, plain status should report exactly the "
+        f"uncommitted new files, got {sorted(after_commit)}"
+    )
+    for p in pending:
+        entry = after_commit[to_posix(p)]
+        assert entry["action"] == "add", (
+            f"partial commit demoted uncommitted new file {p} from add to "
+            f"{entry['action']!r}: {entry}"
+        )
+        assert entry["flagDirty"] is True, f"{p} should remain dirty: {entry}"
+
+    # --check-dirty re-verifies dirty content but never re-derives add/keep, so
+    # it must report the uncommitted files exactly as before the commit.
+    rechecked = dirty_files(check_dirty=True)
+    assert set(rechecked) == pending_posix, (
+        f"--check-dirty should report exactly the uncommitted new files, got "
+        f"{sorted(rechecked)}"
+    )
+    for p in pending:
+        entry = rechecked[to_posix(p)]
+        assert entry["action"] == "add", (
+            f"--check-dirty did not restore the add classification for {p}: {entry}"
+        )
+        assert entry["flagDirty"] is True, (
+            f"{p} should remain dirty after --check-dirty: {entry}"
+        )
