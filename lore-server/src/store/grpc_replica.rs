@@ -162,7 +162,7 @@ impl ReplicationClientInstruments {
         let connect = instrument_provider.counter("replication.connect");
         let disconnect = instrument_provider.counter("replication.disconnect");
 
-        ReplicationClientInstruments {
+        Self {
             instrument_provider,
             messages_dropped,
             operation_latency,
@@ -202,9 +202,9 @@ impl From<tonic::Status> for ReplicationClientError {
         info!(?status, "Replication gRPC request failed");
         match status.code() {
             tonic::Code::Unavailable | tonic::Code::ResourceExhausted => {
-                ReplicationClientError::SlowDown
+                Self::SlowDown
             }
-            _ => ReplicationClientError::RequestFailed(status),
+            _ => Self::RequestFailed(status),
         }
     }
 }
@@ -523,7 +523,7 @@ pub struct GrpcReplica {
 
 impl GrpcReplica {
     pub fn new(client: ReplicationClient) -> Self {
-        GrpcReplica { client }
+        Self { client }
     }
 }
 

@@ -28,7 +28,7 @@ impl ChaosRunner {
         config: RunnerConfig,
         probability: ProbabilityEngine,
         urc: LoreInterface,
-    ) -> ChaosRunner {
+    ) -> Self {
         let config = Rc::new(config);
         let probability = Rc::new(RefCell::new(probability));
         let picker: Box<dyn Picker> = if let Some(replay_file) = config.replay_operations.as_ref() {

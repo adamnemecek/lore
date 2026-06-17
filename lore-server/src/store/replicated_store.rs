@@ -83,7 +83,7 @@ where
         let instrument_provider = ReplicatedStoreProvider {};
 
         let container = ClientContainer::new(client_factory, client_container_config).await?;
-        let store = Arc::new(ReplicatedStore {
+        let store = Arc::new(Self {
             instruments: ReplicatedStoreInstruments::new(instrument_provider),
             client_container: container,
             refresh_task: None.into(),
@@ -96,7 +96,7 @@ where
     }
 
     fn setup_periodic_refresh(
-        store: &Arc<ReplicatedStore<ClientType>>,
+        store: &Arc<Self>,
         periodic_client_refresh: Duration,
     ) {
         let weak = Arc::downgrade(store);
@@ -125,7 +125,7 @@ where
     }
 
     fn setup_client_stats_monitor(
-        store: &Arc<ReplicatedStore<ClientType>>,
+        store: &Arc<Self>,
         monitor_interval: Duration,
     ) {
         let quic_instruments = ClientMetrics::new(

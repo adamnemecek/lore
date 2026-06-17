@@ -92,7 +92,7 @@ impl StorageSession {
     pub fn pending<F, Fut>(resolver: F) -> Self
     where
         F: Fn() -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = Result<Arc<StorageSession>, ProtocolError>>
+        Fut: std::future::Future<Output = Result<Arc<Self>, ProtocolError>>
             + Send
             + 'static,
     {
